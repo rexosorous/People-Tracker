@@ -2,10 +2,12 @@
 from gpiozero import DistanceSensor
 
 # python standard libraries
-import time
+from time import sleep
 
 # local modules
+import constants
 import db_handler as dbh
+import utils
 
 
 
@@ -19,8 +21,9 @@ class Tracker:
         db (DB_Handler)
         ingress_floor (float): the distance to the nearest object from the ingress sensor in meters
         egress_floor (float): the distance to the nearest object from the egress sensor in meters
+        timeout (float): when a sensor is tripped, how long to wait for the second sensor to trip (in seconds)
     '''
-    def __init__(self, pins, db_filename):
+    def __init__(self, pins, db_filename, timeout):
         '''
         Args:
             pins (dict): a dict that contains info about the pins that the sensors are connected to.
@@ -36,13 +39,15 @@ class Tracker:
                             }
                         }
             db_filename (str): database filename
+            timeout (float): when a sensor is tripped, how long to wait for the second sensor to trip
         '''
         self.ingress_sensor = DistanceSensor(echo=pins['ingress']['echo'], trigger=pins['ingress']['trigger'])
         self.egress_sensor = DistanceSensor(echo=pins['egress']['echo'], trigger=pins['egress']['trigger'])
         self.db = dbh.DB_Handler(db_filename)
+        self.timeout = timeout
 
-        self.ingress_floor = 1 # in meters
-        self.egress_floor = 1
+        self.ingress_floor = 1  # in meters
+        self.egress_floor = 1   # in meters
         self.init_distance()
 
 
@@ -78,12 +83,12 @@ class Tracker:
         turned back before tripping the second sensor.
 
         Note:
-            People have 3 seconds to trip the second sensor before it times out and
+            There is an allotted time to trip the second sensor before it times out and
             "thinks" the person has turned back.
         '''
-        date = time.strftime("%Y-%m-%d")    # iso 8601 format (yyyy-mm-dd) because we're not savages
-        start_time = time.time()
-        while time.time() < start_time + 3: # 3 second timeout
+        date = utils.iso_date() # iso 8601 format (yyyy-mm-dd) because we're not savages
+        start_time = utils.unix_time() # used for timeout
+        while utils.unix_time() < start_time + self.timeout:  # poll the sensors until timeout
             if sensor.distance < floor:
                 self.db.increment(db_field, date)
                 sensor.wait_for_out_of_range()
@@ -105,12 +110,17 @@ class Tracker:
             ingress_distance = self.ingress_sensor.distance
             egress_distance = self.egress_sensor.distance
             if ingress_distance < self.ingress_floor and egress_distance < self.egress_floor:
-                time.sleep(1)
+                # both sensors are tripped usually when someone is moving slowly through the doorway
+                # we need to ignore input from the sensors (by sleeping) for a short while to allow
+                # the person to go all the way through the threshold. if we don't, then undoubtedly
+                # we'll end up in a situation where one sensor is tripped, but the other isn't
+                # resulting in a false positive of movement
+                sleep(constants.DUAL_TRIP_WAIT)
                 continue
             if ingress_distance < self.ingress_floor:
-                self.ingress(self.egress_sensor, self.egress_floor, 'ingress')
+                self.process_direction(self.egress_sensor, self.egress_floor, 'ingress')
             elif egress_distance < self.egress_floor:
-                self.egress(self.ingress_sensor, self.ingress_floor, 'egress')
+                self.process_direction(self.ingress_sensor, self.ingress_floor, 'egress')
 
 
 
@@ -118,18 +128,5 @@ class Tracker:
 
 
 if __name__ == '__main__':
-    PINS = {
-        "ingress": {
-            "trigger": 17,
-            "echo": 18
-        },
-        "egress": {
-            "trigger": 22,
-            "echo": 23
-        }
-    }
-
-    DB_FILENAME = 'population.db'
-
-    tracker = Tracker(PINS, DB_FILENAME)
+    tracker = Tracker(constants.PINS, constants.DB_FILE, constants.TIMEOUT)
     tracker.run()

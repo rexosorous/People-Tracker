@@ -1,0 +1,14 @@
+<html>
+<body>
+    <h1>This is a list of all the dates with recorded information.</h1>
+    <hr>
+
+    {% for date in dates %}
+        <a href="{{base_url}}{{date.date}}"> <h1>{{date.display_date}}</h1> </a>
+    {% endfor %}
+
+    <hr>
+    <a href="{{base_url}}"> <h2>Click here to go to the home page</h2> </a>
+
+</body>
+</html>

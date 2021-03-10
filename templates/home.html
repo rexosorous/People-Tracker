@@ -1,0 +1,38 @@
+<html>
+<body>
+    <div>
+        <h2 style="display: inline;">As of </h2>
+        <h1 style="display: inline; color: violet;">{{data.datetime}}</h1>
+        <h2 style="display: inline;">, there are </h2>
+        <h1 style="display: inline; color: salmon;">approximately</h1>
+    </div>
+
+    <div>
+        <h1 style="display: inline; color: lightgreen;">{{data.inside}}</h1>
+        <h2 style="display: inline;"> persons currently inside</h2>
+    </div>
+
+    <div>
+        <h1 style="display: inline; color: cornflowerblue;">{{data.entrants}}</h1>
+        <h2 style="display: inline;"> total entrants for today</h2>
+    </div>
+
+    <div>
+        <h3>Refresh this page to update the numbers</h3>
+    </div>
+
+    <hr>
+    <div>
+        <h3>To look at data for a different day, simply add "/{date}" to the url. Where {date} is in the format yyyy-mm-dd</h3>
+        <h3 style="display: inline;">For example: "http://192.168.1.1:5000/1987-07-27" to view data from July 27, 1987</h3>
+        <h6 style="display: inline; color: white;"> (Never Gonna Give You Up...)</h6>
+    </div>
+
+    <hr>
+    <div>
+        <h3>To look at all the dates that have data, visit the index page</h3>
+        <a href="{{base_url}}index"> <h2>Click here to go to the index page</h2> </a>
+    </div>
+
+</body>
+</html>
